@@ -3,87 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KTV</title>
+    <title>Share Song - 共享歌單</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #0f0f13; --panel: #1c1c21; --primary: #00e5ff; --text: #eee; --gray: #888; }
-        body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px 10px; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 15px; }
+        :root { --bg: #0b0b10; --panel: rgba(25, 25, 35, 0.8); --primary: #00e5ff; --primary-glow: rgba(0, 229, 255, 0.4); --accent: #ff2a5f; --text: #f0f0f0; --gray: #888; --border: rgba(255, 255, 255, 0.08); }
+        body { font-family: 'Noto Sans TC', system-ui, sans-serif; background: radial-gradient(circle at top, #1a1a2e, var(--bg)); color: var(--text); margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; box-sizing: border-box; }
         
-        input, button { padding: 12px; border-radius: 10px; border: none; font-size: 16px; outline: none; }
-        input { background: var(--panel); color: var(--text); border: 1px solid #333; }
-        input:focus { border-color: var(--primary); }
-        button { cursor: pointer; font-weight: bold; transition: 0.2s; background: #333; color: #fff; }
-        button:hover { filter: brightness(1.2); }
-        .btn-primary { background: var(--primary); color: #000; }
+        /* 基礎元件樣式 */
+        .glass-card { background: var(--panel); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
+        input, button { padding: 14px 18px; border-radius: 12px; border: none; font-size: 15px; outline: none; transition: 0.3s; font-family: inherit; }
+        input { background: rgba(0,0,0,0.4); color: var(--text); border: 1px solid var(--border); width: 100%; box-sizing: border-box; }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 12px var(--primary-glow); }
+        button { cursor: pointer; font-weight: bold; background: #333; color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        button:hover { filter: brightness(1.2); transform: translateY(-1px); }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), #0077ff); color: #000; box-shadow: 0 4px 15px var(--primary-glow); }
+        
+        /* 大廳樣式 */
+        #lobby { display: none; flex-direction: column; align-items: center; justify-content: center; margin-top: 15vh; padding: 40px 20px; text-align: center; max-width: 400px; width: 100%; height: fit-content;}
+        #lobby h1 { margin: 0 0 10px 0; font-size: 28px; letter-spacing: 2px; text-shadow: 0 0 10px var(--primary-glow); text-transform: uppercase; }
+        .room-input-wrapper { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 280px; margin-top: 20px; }
+        #room-input { text-align: center; font-size: 18px; letter-spacing: 2px; }
 
-        /* 大廳 */
-        #lobby { display: none; flex-direction: column; gap: 10px; margin-top: 20vh; text-align: center; }
+        /* 主程式佈局 - 核心修改處 */
+        #main { display: none; width: 100%; max-width: 1200px; flex-direction: column; gap: 20px; }
         
-        /* 包廂 */
-        #main { display: none; flex-direction: column; gap: 15px; }
-        .flex-row { display: flex; gap: 10px; }
+        /* 頂部欄 */
+        .header-bar { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; flex-shrink: 0; }
+        #room-id-txt { font-weight: bold; letter-spacing: 1px; color: var(--primary); font-size: 18px; text-shadow: 0 0 8px var(--primary-glow); }
+        .copy-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 8px 16px; font-size: 13px; color: var(--text); border-radius: 8px; }
+
+        /* 主要內容區：左右分欄 */
+        .content-body { display: flex; gap: 20px; flex-wrap: wrap; }
         
-        .header-bar { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 10px 15px; border-radius: 10px; }
-        #room-id-txt { font-weight: bold; letter-spacing: 1px; }
+        /* 左側：播放器與控制區 */
+        .player-section { flex: 1.5; min-width: 300px; display: flex; flex-direction: column; gap: 15px; }
         
-        #nickname { width: 80px; }
+        .input-row { display: flex; gap: 10px; }
         #yt-link { flex: 1; }
+        #add-btn { flex-shrink: 0; width: 100px; }
         
-        .player-wrapper { position: relative; padding-bottom: 56.25%; background: #000; border-radius: 10px; overflow: hidden; }
-        .player-wrapper iframe { position: absolute; width: 100%; height: 100%; }
+        .player-wrapper { position: relative; padding-bottom: 56.25%; background: #000; border-radius: 16px; overflow: hidden; border: 1px solid #222; box-shadow: 0 10px 20px rgba(0,0,0,0.6); }
+        .player-wrapper iframe { position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; }
+        #force-play { background: linear-gradient(135deg, #00e5ff, #00ff88); color: #000; width: 100%; display: none; box-shadow: 0 4px 15px rgba(0,255,136,0.3); }
         
-        #force-play { background: #4CAF50; width: 100%; display: none; }
-        
-        ul { list-style: none; padding: 0; margin: 0; background: var(--panel); border-radius: 10px; overflow: hidden; }
-        li { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a2a2a; }
-        li.playing { color: var(--primary); font-weight: bold; background: rgba(0, 229, 255, 0.05); }
-        .song-info { display: flex; align-items: center; gap: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        .tag { font-size: 12px; background: #333; padding: 2px 8px; border-radius: 10px; color: #ccc; }
-        .playing .tag { background: var(--primary); color: #000; }
-        .del-btn { background: transparent; color: #ff4444; padding: 5px 10px; }
+        .controls-row { display: flex; justify-content: flex-end; }
+        #skip-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); padding: 10px 20px; font-size: 14px; color: var(--text); border-radius: 12px;}
+        #skip-btn:hover { background: rgba(255, 42, 95, 0.1); border-color: var(--accent); color: var(--accent); }
 
-        #toast { position: fixed; bottom: -50px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 20px; border-radius: 20px; transition: 0.3s; opacity: 0; font-weight: bold; }
-        #toast.show { bottom: 20px; opacity: 1; }
+        /* 右側：清單區 - 固定在右邊 */
+        .queue-section { flex: 1; min-width: 300px; display: flex; flex-direction: column; max-height: calc(100vh - 120px); position: sticky; top: 20px; }
+        .queue-title { padding: 18px 20px; margin: 0; font-size: 16px; font-weight: bold; color: var(--text); border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); letter-spacing: 1px; }
+        
+        /* 清單滾動區域 */
+        ul#playlist { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; display: flex; flex-direction: column; }
+        ul#playlist::-webkit-scrollbar { width: 6px; }
+        ul#playlist::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        ul#playlist::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+        ul#playlist::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+        
+        /* 列表項目 */
+        li { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); transition: 0.2s; gap: 10px; }
+        li:last-child { border-bottom: none; }
+        li.playing { background: rgba(0, 229, 255, 0.05); border-left: 4px solid var(--primary); padding-left: 16px; }
+        li.playing .song-title { color: var(--primary); font-weight: bold; text-shadow: 0 0 8px var(--primary-glow); }
+        
+        .song-info { display: flex; align-items: center; gap: 12px; overflow: hidden; }
+        .song-index { min-width: 25px; text-align: center; color: var(--gray); font-size: 14px; font-family: monospace; }
+        .playing .song-index { color: var(--primary); font-weight: bold; }
+        .song-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; color: #ddd; }
+        
+        .del-btn { background: transparent; color: var(--gray); padding: 6px 12px; border-radius: 8px; font-size: 18px; opacity: 0.5; flex-shrink: 0; padding: 0; width: 30px; height: 30px;}
+        .del-btn:hover { opacity: 1; color: var(--accent); background: rgba(255,42,95,0.1); }
+        
+        /* Toast 提示 */
+        #toast { position: fixed; bottom: -60px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 12px 24px; border-radius: 30px; transition: 0.4s; opacity: 0; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 100; font-size: 14px; pointer-events: none;}
+        #toast.show { bottom: 30px; opacity: 1; }
+
+        /* 響應式佈局斷點 (手機板) */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .content-body { flex-direction: column; }
+            .queue-section { max-height: 400px; position: static; }
+            .header-bar { margin-bottom: 10px; }
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div id="lobby">
-        <input type="text" id="room-input" placeholder="Room ID">
-        <button id="enter-btn" class="btn-primary">Enter</button>
-    </div>
+<div id="toast"></div>
 
-    <div id="main">
-        <div class="header-bar">
-            <span id="room-id-txt"></span>
-            <button onclick="copyLink()">Copy Link</button>
-        </div>
-
-        <div class="flex-row">
-            <input type="text" id="nickname" placeholder="Name">
-            <input type="text" id="yt-link" placeholder="YouTube URL">
-            <button id="add-btn" class="btn-primary">+</button>
-        </div>
-
-        <button id="force-play">▶ Play</button>
-
-        <div class="player-wrapper"><div id="player"></div></div>
-        
-        <div style="text-align: right;">
-            <button id="skip-btn">⏭ Skip</button>
-        </div>
-
-        <ul id="playlist"></ul>
+<div id="lobby" class="glass-card">
+    <h1>Share Song</h1>
+    <p style="color: var(--gray); font-size: 14px; margin: 0;">輸入包廂代碼建立或加入房間</p>
+    <div class="room-input-wrapper">
+        <input type="text" id="room-input" placeholder="例如: 888" autocomplete="off" maxlength="10">
+        <button id="enter-btn" class="btn-primary">進入包廂</button>
     </div>
 </div>
 
-<div id="toast"></div>
+<div id="main">
+    <div class="header-bar glass-card">
+        <span id="room-id-txt">ROOM: ----</span>
+        <button class="copy-btn" onclick="copyLink()">📋 複製連結</button>
+    </div>
+
+    <div class="content-body">
+        <div class="player-section">
+            <div class="input-row">
+                <input type="text" id="yt-link" placeholder="貼上 YouTube 網址..." autocomplete="off">
+                <button id="add-btn" class="btn-primary">➕ 加入</button>
+            </div>
+            
+            <div class="player-wrapper">
+                <div id="player"></div>
+            </div>
+            <button id="force-play" class="glass-card">▶ 點擊啟動播放器</button>
+            
+            <div class="controls-row">
+                <button id="skip-btn">跳過此曲 ⏭</button>
+            </div>
+        </div>
+
+        <div class="queue-section glass-card">
+            <h4 class="queue-title">清單</h4>
+            <ul id="playlist">
+                </ul>
+        </div>
+    </div>
+</div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+    import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
+    // ⚠️ 請替換成你自己的 Firebase 配置
     const app = initializeApp({
       apiKey: "AIzaSyAFYLj9wdQWuKtTmGdhO1trjUNRCSHNe3I",
       authDomain: "karaoke-fcaef.firebaseapp.com",
@@ -92,38 +145,35 @@
     });
     const db = getDatabase(app);
 
-    // --- 狀態管理 (State) ---
-    const state = {
-        queue: [],
-        currentKey: null,
-        isPlayerReady: false
-    };
-
+    const state = { queue: [], currentKey: null, isPlayerReady: false };
     let player;
     let queueRef;
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room');
 
+    // UI 反饋
     const toast = (msg) => {
         const el = document.getElementById("toast");
         el.textContent = msg;
         el.classList.add("show");
-        setTimeout(() => el.classList.remove("show"), 2000);
+        setTimeout(() => el.classList.remove("show"), 2500);
     };
 
-    window.copyLink = () => {
-        navigator.clipboard.writeText(window.location.href);
-        toast("Copied");
+    // 複製連結
+    window.copyLink = () => { 
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            toast("連結已複製，發送給朋友吧！");
+        });
     };
 
-    // --- Rerender 畫面渲染邏輯 ---
+    // 渲染清單介面
     function render() {
         const list = document.getElementById('playlist');
         list.innerHTML = ''; 
-
+        
         if (state.queue.length === 0) {
-            list.innerHTML = '<li style="color:#888; justify-content:center;">Empty</li>';
-            if(state.isPlayerReady) document.getElementById('force-play').style.display = 'block';
+            list.innerHTML = '<li style="color:var(--gray); justify-content:center; padding: 40px; font-size:14px;">清單空空的，快去複製 YouTube 連結加入！</li>';
+            if(state.isPlayerReady) document.getElementById('force-play').style.display = 'none'; // 無歌時不顯示強制播放
             return;
         }
 
@@ -134,31 +184,37 @@
             
             li.innerHTML = `
                 <div class="song-info">
-                    <span>${isPlaying ? '▶' : i + '.'} ${song.title}</span>
-                    <span class="tag">${song.nickname}</span>
+                    <div class="song-index">${isPlaying ? '▶' : (i + 1)}</div>
+                    <div class="song-title" title="${song.title}">${song.title}</div>
                 </div>
-                <button class="del-btn" data-key="${song.key}">×</button>
+                <button class="del-btn" data-key="${song.key}" title="移除">×</button>
             `;
             list.appendChild(li);
         });
 
-        // 綁定刪除按鈕事件 (事件代理概念)
+        // 綁定刪除事件
         document.querySelectorAll('.del-btn').forEach(btn => {
-            btn.onclick = (e) => remove(ref(db, `rooms/${roomId}/queue/${e.target.dataset.key}`));
+            btn.onclick = (e) => {
+                const key = e.target.closest('.del-btn').dataset.key;
+                remove(ref(db, `rooms/${roomId}/queue/${key}`))
+                .then(() => toast("已移除歌曲"))
+                .catch(err => alert("移除失敗，請檢查 Firebase 權限設定"));
+            };
         });
-
+        
         checkPlayer();
     }
 
-    // --- 播放器邏輯 ---
+    // 檢查並播放下一首
     function checkPlayer() {
         if (!state.isPlayerReady) return;
-        
         if (state.queue.length > 0) {
-            const nextKey = state.queue[0].key;
-            if (state.currentKey !== nextKey) {
-                state.currentKey = nextKey;
-                player.loadVideoById(state.queue[0].videoId);
+            const nextSong = state.queue[0];
+            if (state.currentKey !== nextSong.key) {
+                state.currentKey = nextSong.key;
+                player.loadVideoById(nextSong.videoId);
+                // 嘗試自動播放 (可能會被瀏覽器攔截)
+                player.playVideo();
             }
         } else {
             if (player.stopVideo) player.stopVideo();
@@ -166,71 +222,152 @@
         }
     }
 
-    // --- 路由與初始化 ---
+    // 初始化邏輯
     if (!roomId) {
+        // 大廳模式
         document.getElementById('lobby').style.display = 'flex';
-        document.getElementById('enter-btn').onclick = () => {
-            const val = document.getElementById('room-input').value.trim();
-            if (val) window.location.href = `?room=${val}`;
+        const roomInput = document.getElementById('room-input');
+        
+        const enterRoom = () => {
+            const val = roomInput.value.trim();
+            if (val) window.location.href = `?room=${encodeURIComponent(val)}`;
+            else toast("請輸入代碼");
         };
+        
+        document.getElementById('enter-btn').onclick = enterRoom;
+        roomInput.onkeypress = (e) => { if(e.key === 'Enter') enterRoom(); };
+        roomInput.focus();
+
     } else {
+        // 包廂模式
         document.getElementById('main').style.display = 'flex';
         document.getElementById('room-id-txt').textContent = `ROOM: ${roomId}`;
         queueRef = ref(db, `rooms/${roomId}/queue`);
 
-        // 監聽資料庫變化 -> 更新 state -> 觸發 render
+        // 監聽 Firebase 資料變動
         onValue(queueRef, (snapshot) => {
             const songs = [];
-            snapshot.forEach(child => songs.push({ key: child.key, ...child.val() }));
+            snapshot.forEach(child => {
+                songs.push({ key: child.key, ...child.val() });
+            });
+            // 依時間戳排序
             state.queue = songs.sort((a, b) => a.timestamp - b.timestamp);
             render();
+        }, (error) => {
+            alert("❌ 資料庫連線失敗！\n請確保 Firebase Realtime Database 的 Rules 設為 true");
         });
 
+        // 載入 YouTube API
         const tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
-        document.head.appendChild(tag);
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
         window.onYouTubeIframeAPIReady = () => {
             player = new YT.Player('player', {
                 height: '100%', width: '100%',
-                playerVars: { 'autoplay': 1, 'controls': 1, 'playsinline': 1 },
+                playerVars: { 
+                    'autoplay': 1, 
+                    'controls': 1, 
+                    'playsinline': 1,
+                    'rel': 0, // 不顯示相關影片
+                    'modestbranding': 1 // 減少 YouTube logo
+                },
                 events: {
-                    'onReady': () => { state.isPlayerReady = true; render(); },
+                    'onReady': () => { 
+                        state.isPlayerReady = true; 
+                        render(); // API 準備好後渲染一次，嘗試播放第一首
+                    },
                     'onStateChange': (e) => {
-                        if (e.data === 0 && state.currentKey) remove(ref(db, `rooms/${roomId}/queue/${state.currentKey}`));
-                        if (e.data === 1) document.getElementById('force-play').style.display = 'none';
+                        // e.data: 0=結束, 1=播放中, 2=暫停, 3=緩衝中
+                        if (e.data === YT.PlayerState.ENDED && state.currentKey) {
+                            // 播放結束，移除該歌曲
+                            remove(ref(db, `rooms/${roomId}/queue/${state.currentKey}`));
+                        }
+                        
+                        // 處理 autoplay 被攔截的情況
+                        const forceBtn = document.getElementById('force-play');
+                        if (e.data === YT.PlayerState.UNSTARTED && state.queue.length > 0) {
+                             forceBtn.style.display = 'block';
+                        } else if (e.data === YT.PlayerState.PLAYING) {
+                             forceBtn.style.display = 'none';
+                        }
+                    },
+                    'onError': (e) => {
+                        console.error("播放器發生錯誤:", e.data);
+                        toast("此影片無法播放，跳過");
+                        // 遇到錯誤（如版權限制、嵌入限制）自動跳過
+                        setTimeout(()=> {
+                            if (state.currentKey) remove(ref(db, `rooms/${roomId}/queue/${state.currentKey}`));
+                        }, 2000);
                     }
                 }
             });
         };
     }
 
-    // --- UI 互動 ---
+    // 解析 YouTube ID
     const getId = url => (url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/) || [])[1];
 
-    document.getElementById('add-btn').onclick = () => {
-        const url = document.getElementById('yt-link').value;
-        const name = document.getElementById('nickname').value.trim() || "Anon";
+// 優化後的點歌邏輯：加入後自動抓取標題 (已修復寫入問題)
+    const addSong = () => {
+        const urlInput = document.getElementById('yt-link');
+        const url = urlInput.value.trim();
         const vid = getId(url);
         
         if (vid) {
-            fetch(`https://noembed.com/embed?dataType=json&url=https://www.youtube.com/watch?v=${vid}`)
+            // 直接用 push 寫入資料並取得 Reference
+            const newSongRef = push(queueRef, { 
+                videoId: vid, 
+                title: "Loading...", // 預設標題
+                timestamp: Date.now() 
+            });
+            
+            const songKey = newSongRef.key; // 取得這首歌的專屬 ID
+
+            newSongRef.then(() => {
+                urlInput.value = '';
+                toast("✅ 已加入清單");
+                
+                // 異步抓取真實標題並更新
+                fetch(`https://noembed.com/embed?dataType=json&url=https://www.youtube.com/watch?v=${vid}`)
                 .then(r => r.json())
-                .then(d => push(queueRef, { videoId: vid, title: d.title || "Unknown", nickname: name, timestamp: Date.now() }))
-                .catch(() => push(queueRef, { videoId: vid, title: vid, nickname: name, timestamp: Date.now() }));
-            document.getElementById('yt-link').value = '';
-            toast("Added");
+                .then(d => {
+                    if(d.title) {
+                        // 回寫更新 Firebase 中的標題
+                        update(ref(db, `rooms/${roomId}/queue/${songKey}`), { title: d.title });
+                    }
+                }).catch(e => {
+                    // 如果抓不到，就把 ID 當作標題
+                    update(ref(db, `rooms/${roomId}/queue/${songKey}`), { title: "YouTube Video - " + vid });
+                });
+            })
+            .catch(error => {
+                alert("❌ 加入失敗，請檢查 Firebase Rules 寫入權限是否為 true");
+                console.error(error);
+            });
+        } else if (url) {
+            toast("❌ 無效的 YouTube 網址");
         }
     };
 
+    // 綁定按鈕事件
+    document.getElementById('add-btn').onclick = addSong;
+    document.getElementById('yt-link').onkeypress = (e) => { if(e.key === 'Enter') addSong(); };
+
+    // 手動跳過
     document.getElementById('skip-btn').onclick = () => {
-        if (state.currentKey) remove(ref(db, `rooms/${roomId}/queue/${state.currentKey}`));
+        if (state.currentKey) {
+            remove(ref(db, `rooms/${roomId}/queue/${state.currentKey}`))
+            .then(()=> toast("已跳過歌曲"));
+        }
     };
 
+    // 強制播放（解決瀏覽器阻擋自動播放）
     document.getElementById('force-play').onclick = () => {
-        if (player && player.playVideo) {
-            player.playVideo();
-            document.getElementById('force-play').style.display = 'none';
+        if (player && player.playVideo) { 
+            player.playVideo(); 
+            document.getElementById('force-play').style.display = 'none'; 
         }
     };
 </script>
