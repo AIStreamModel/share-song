@@ -80,11 +80,59 @@
         #toast.show { bottom: 30px; opacity: 1; }
 
         /* 響應式佈局斷點 (手機板) */
+        /* 響應式佈局斷點 (手機板精緻優化) */
         @media (max-width: 768px) {
-            body { padding: 10px; }
-            .content-body { flex-direction: column; }
-            .queue-section { max-height: 400px; position: static; }
-            .header-bar { margin-bottom: 10px; }
+            body { 
+                padding: 10px; 
+                height: 100dvh; /* 使用動態視窗高度 */
+                overflow: hidden; /* 防止整個網頁上下亂滑 */
+            }
+            
+            #main { 
+                height: 100%; 
+                display: flex; 
+                flex-direction: column; 
+                gap: 12px;
+            }
+
+            .header-bar { 
+                padding: 12px 16px; 
+                margin-bottom: 0;
+            }
+
+            .content-body { 
+                flex-direction: column; 
+                flex: 1; /* 佔滿剩餘空間 */
+                overflow: hidden; 
+                gap: 12px;
+            }
+
+            .player-section { 
+                flex: none; /* 固定高度，不被擠壓 */
+                min-width: 100%;
+                gap: 12px;
+            }
+
+            .controls-row {
+                justify-content: space-between; /* 讓按鈕在手機上更好按 */
+            }
+
+            #skip-btn {
+                width: 100%; /* 手機上讓跳過按鈕變寬，方便點擊 */
+                text-align: center;
+            }
+
+            .queue-section { 
+                flex: 1; /* 歌單自動填滿剩下的高度 */
+                position: static; 
+                max-height: none; 
+                overflow: hidden; /* 外層鎖定 */
+            }
+
+            ul#playlist {
+                overflow-y: auto; /* 內層允許滾動 */
+                padding-bottom: 20px; /* 底部留白，避免被手機系統列擋住 */
+            }
         }
     </style>
 </head>
@@ -94,17 +142,17 @@
 
 <div id="lobby" class="glass-card">
     <h1>Share Song</h1>
-    <p style="color: var(--gray); font-size: 14px; margin: 0;">輸入包廂代碼建立或加入房間</p>
+    <p style="color: var(--gray); font-size: 14px; margin: 0;">輸入房間代碼</p>
     <div class="room-input-wrapper">
         <input type="text" id="room-input" placeholder="例如: 888" autocomplete="off" maxlength="10">
-        <button id="enter-btn" class="btn-primary">進入包廂</button>
+        <button id="enter-btn" class="btn-primary">進入房間</button>
     </div>
 </div>
 
 <div id="main">
     <div class="header-bar glass-card">
         <span id="room-id-txt">ROOM: ----</span>
-        <button class="copy-btn" onclick="copyLink()">📋 複製連結</button>
+        <button class="copy-btn" onclick="copyLink()">複製連結</button>
     </div>
 
     <div class="content-body">
@@ -162,7 +210,7 @@
     // 複製連結
     window.copyLink = () => { 
         navigator.clipboard.writeText(window.location.href).then(() => {
-            toast("連結已複製，發送給朋友吧！");
+            toast("連結已複製");
         });
     };
 
@@ -208,16 +256,20 @@
     // 檢查並播放下一首
     function checkPlayer() {
         if (!state.isPlayerReady) return;
+        
         if (state.queue.length > 0) {
             const nextSong = state.queue[0];
             if (state.currentKey !== nextSong.key) {
                 state.currentKey = nextSong.key;
                 player.loadVideoById(nextSong.videoId);
-                // 嘗試自動播放 (可能會被瀏覽器攔截)
                 player.playVideo();
             }
         } else {
-            if (player.stopVideo) player.stopVideo();
+            // 當清單被清空（例如跳過了最後一首歌）
+            if (player.stopVideo) {
+                player.stopVideo(); 
+                player.clearVideo(); // 清除播放器上的影片畫面，變回黑畫面
+            }
             state.currentKey = null;
         }
     }
@@ -254,7 +306,7 @@
             state.queue = songs.sort((a, b) => a.timestamp - b.timestamp);
             render();
         }, (error) => {
-            alert("❌ 資料庫連線失敗！\n請確保 Firebase Realtime Database 的 Rules 設為 true");
+            alert("資料庫連線失敗！\n請確保 Firebase Realtime Database 的 Rules 設為 true");
         });
 
         // 載入 YouTube API
@@ -327,7 +379,7 @@
 
             newSongRef.then(() => {
                 urlInput.value = '';
-                toast("✅ 已加入清單");
+                toast("已加入清單");
                 
                 // 異步抓取真實標題並更新
                 fetch(`https://noembed.com/embed?dataType=json&url=https://www.youtube.com/watch?v=${vid}`)
@@ -343,11 +395,11 @@
                 });
             })
             .catch(error => {
-                alert("❌ 加入失敗，請檢查 Firebase Rules 寫入權限是否為 true");
+                alert("加入失敗");
                 console.error(error);
             });
         } else if (url) {
-            toast("❌ 無效的 YouTube 網址");
+            toast("無效的 YouTube 網址");
         }
     };
 
@@ -358,8 +410,13 @@
     // 手動跳過
     document.getElementById('skip-btn').onclick = () => {
         if (state.currentKey) {
+            // 情況 A：有歌正在播放 (不管清單後面還有沒有歌)
+            // 刪除當前這首歌，Firebase 會自動同步讓播放器停止或播下一首
             remove(ref(db, `rooms/${roomId}/queue/${state.currentKey}`))
-            .then(()=> toast("已跳過歌曲"));
+            .then(() => toast("已跳過目前歌曲"));
+        } else {
+            // 情況 B：完全沒有歌在播放 (真正的空清單)
+            toast("目前沒有歌曲可以跳過");
         }
     };
 
